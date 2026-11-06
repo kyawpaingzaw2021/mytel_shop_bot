@@ -1,0 +1,39 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# Database
+*.sql
+*.sqlite3
+*.db
+
+# Uploads (Admin က တင်ထားတဲ့ ပုံတွေ)
+webapp/uploads/*
+!webapp/uploads/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# Backup
+backups/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

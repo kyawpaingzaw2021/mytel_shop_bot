@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Myanmar Operator</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/style.css?v=1">
+</head>
+<body>
+  <div id="maintenance-overlay">
+    <h1 style="font-size:60px;">🛠️</h1>
+    <h2 style="color:var(--primary);">ခေတ္တ ရပ်နားထားပါသည်</h2>
+  </div>
+
+  <div class="header">
+    <h1>Myanmar Operator</h1>
+    <p>မင်္ဂလာပါ <b id="user-name">...</b> ရေ!</p>
+    <div id="wallet-display" class="balance-badge" style="display:none;">💰 Balance: 0 Ks</div>
+  </div>
+
+  <!-- USER APP -->
+  <div id="user-app" style="display:none;">
+    <div id="u-tab-shop" class="tab-content active"></div>
+    <div id="u-tab-topup" class="tab-content">
+      <div class="category-title">💰 ငွေဖြည့်ရန်</div>
+      <div class="card">
+        <div style="background:var(--bg); padding:15px; border-radius:12px; margin-bottom:15px;">
+          <p style="margin:0; font-size:13px; color:var(--hint);">ငွေလွှဲရန် အကောင့်များ</p>
+          <div id="u-pay-info" style="margin-top:5px; font-weight:bold; color:var(--primary);"></div>
+        </div>
+        <input type="number" id="topup-amount" placeholder="ငွေပမာဏ (Ks)">
+        <input type="tel" id="topup-sender-phone" placeholder="ငွေလွှဲသည့် ဖုန်းနံပါတ်">
+        <div style="border: 1px dashed var(--hint); padding: 20px; text-align: center; border-radius: 12px; margin-bottom: 12px;">
+          <label for="topup-file" style="cursor:pointer;">
+            <span style="font-size:30px; display:block; margin-bottom:8px;">📸</span>
+            <span style="color:var(--primary); font-weight:bold;">Screenshot ရွေးချယ်ရန်</span>
+          </label>
+          <input type="file" id="topup-file" accept="image/*" style="display:none;" onchange="document.getElementById('file-name').innerText = this.files[0].name">
+          <p id="file-name" style="font-size:12px; color:var(--hint); margin-top:8px;"></p>
+        </div>
+        <button class="btn" onclick="submitTopup()">ပို့မည်</button>
+      </div>
+      <div class="category-title" style="margin-top:30px;">💸 ငွေထုတ်ရန်</div>
+      <div class="card">
+        <input type="number" id="cashout-amount" placeholder="ငွေပမာဏ (Ks)">
+        <input type="text" id="cashout-acc-name" placeholder="အကောင့်အမည်">
+        <input type="tel" id="cashout-phone" placeholder="KPay/Wave ဖုန်းနံပါတ်">
+        <button class="btn btn-warning" onclick="submitCashout()">ငွေထုတ်မယ်</button>
+      </div>
+    </div>
+    <div id="u-tab-history" class="tab-content">
+      <div class="category-title">📜 မှာယူမှု မှတ်တမ်း</div><div id="u-history-list"></div>
+      <div class="category-title">💰 ပိုက်ဆံအတက်အကျ</div><div id="u-wallet-list"></div>
+    </div>
+    <div id="u-tab-support" class="tab-content">
+      <div class="category-title">📞 အကူအညီ</div>
+      <div class="card" style="text-align:center; padding: 40px 20px;">
+        <span style="font-size: 60px; display:block; margin-bottom:15px;">👨‍💻</span>
+        <div style="background:var(--bg); padding:15px; border-radius:12px;">
+          <p style="margin:0; font-size:13px; color:var(--hint);">ဆက်သွယ်ရန်</p>
+          <h2 id="user-support-contact" style="margin:10px 0 0 0; color:var(--primary); font-size:22px;">@Admin</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN APP -->
+  <div id="admin-app" style="display:none;">
+    <div id="a-tab-dash" class="tab-content active">
+      <div class="category-title">📋 Pending စာရင်း</div>
+      <div class="stats-grid">
+        <div class="stat-card"><h4>Pending Orders</h4><div class="value" id="st-orders">0</div></div>
+        <div class="stat-card"><h4>Pending Topups</h4><div class="value" id="st-topups" style="color:var(--danger)">0</div></div>
+        <div class="stat-card" style="grid-column: span 2;"><h4>စုစုပေါင်း User</h4><div class="value" id="st-users">0</div></div>
+      </div>
+      <div class="category-title" style="margin-top:20px;">💰 Cash Flow</div>
+      <div class="stats-grid">
+        <div class="stat-card" style="background: rgba(46, 213, 115, 0.1);"><h4 style="color:var(--success);">Cash In</h4><div class="value" id="st-cash-in" style="color:var(--success); font-size:20px;">0 Ks</div></div>
+        <div class="stat-card" style="background: rgba(255, 71, 87, 0.1);"><h4 style="color:var(--danger);">Cash Out</h4><div class="value" id="st-cash-out" style="color:var(--danger); font-size:20px;">0 Ks</div></div>
+      </div>
+      <div class="category-title" style="margin-top:20px;">📈 ယနေ့ စာရင်း</div>
+      <div class="stats-grid">
+        <div class="stat-card" style="background: rgba(36, 129, 204, 0.1);"><h4 style="color:var(--primary);">ယနေ့ အရောင်း</h4><div class="value" id="st-today-sales" style="color:var(--primary); font-size:20px;">0 Ks</div></div>
+        <div class="stat-card"><h4>ယနေ့ Order</h4><div class="value" id="st-today-orders">0</div></div>
+      </div>
+      <div class="category-title" style="margin-top:20px;">📈 ၇ ရက်တာ အရောင်းဂရပ်</div>
+      <div class="card" style="padding:10px; height:220px;"><canvas id="salesChart"></canvas></div>
+      <div class="card" style="margin-top:10px; background:rgba(255, 71, 87, 0.1); border:none;">
+        <div style="display:flex; justify-content:space-between;">
+          <b style="color:var(--danger);">🛠️ Maintenance Mode</b>
+          <button class="btn btn-sm btn-outline" id="maint-btn" onclick="toggleMaintenance()">ပိတ်မယ်</button>
+        </div>
+      </div>
+    </div>
+    
+    <div id="a-tab-orders" class="tab-content">
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="setFilter('orders', 'pending', this)">စောင့်ဆိုင်းနေသည်</button>
+        <button class="filter-btn" onclick="setFilter('orders', 'completed', this)">ပြီးစီးပြီး</button>
+        <button class="filter-btn" onclick="setFilter('orders', 'all', this)">အားလုံး</button>
+      </div>
+      <div id="a-order-list"></div>
+    </div>
+    
+    <div id="a-tab-topups" class="tab-content">
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="setFilter('topups', 'pending', this)">စောင့်ဆိုင်းနေသည်</button>
+        <button class="filter-btn" onclick="setFilter('topups', 'approved', this)">အတည်ပြုပြီး</button>
+      </div>
+      <div id="a-topup-list"></div>
+      <div class="category-title" style="margin-top:30px;">💸 Cash Out Requests</div>
+      <div id="a-cashout-list"></div>
+    </div>
+    
+    <div id="a-tab-items" class="tab-content">
+      <div class="category-title">📦 Item အသစ်ထည့်</div>
+      <div class="card">
+        <input type="text" id="i-name" placeholder="အမည်">
+        <input type="number" id="i-price" placeholder="User ဈေးနှုန်း">
+        <input type="number" id="i-cost-price" placeholder="အရင်းဈေး (Admin Only)">
+        <input type="number" id="i-reseller-price" placeholder="Reseller ဈေးနှုန်း">
+        <input type="text" id="i-cat" placeholder="Main Category">
+        <input type="text" id="i-subcat" placeholder="Sub Category">
+        <select id="i-form-type" style="width:100%; padding:14px; border-radius:12px; margin-bottom:12px; background:var(--bg); border:1px solid rgba(0,0,0,0.1); color:var(--text);">
+          <option value="phone">📱 Phone</option>
+          <option value="sim">💳 SIM</option>
+          <option value="MLBB">🎮 MLBB</option>
+          <option value="PUBG">🎮 PUBG</option>
+        </select>
+        <input type="text" id="i-note" placeholder="သတိပေးချက်">
+        <button class="btn" onclick="addItem()">ထည့်မယ်</button>
+      </div>
+      <div class="category-title">📋 Item စာရင်း</div>
+      <div id="a-item-list"></div>
+    </div>
+    
+    <div id="a-tab-users" class="tab-content">
+      <div class="category-title">👥 User စီမံခန့်ခွဲမှု</div>
+      <div id="a-user-list"></div>
+    </div>
+    
+    <div id="a-tab-reports" class="tab-content">
+      <div class="category-title">📈 Daily Report</div>
+      <div class="card"><input type="date" id="report-date" onchange="loadDailyReport()"><button class="btn" onclick="loadDailyReport()">ကြည့်မယ်</button></div>
+      <div id="daily-report-content"></div>
+      <div class="category-title" style="margin-top:30px;">📊 Monthly Report</div>
+      <div class="card"><input type="month" id="report-month" onchange="loadMonthlyReport()"><button class="btn" onclick="loadMonthlyReport()">ကြည့်မယ်</button></div>
+      <div id="monthly-report-content"></div>
+    </div>
+    
+    <div id="a-tab-admins" class="tab-content">
+      <div class="category-title">🛡️ Admin အသစ် ခန့်အပ်ရန်</div>
+      <div class="card">
+        <input type="number" id="new-admin-id" placeholder="Telegram ID">
+        <select id="new-admin-role" style="width:100%; padding:14px; border-radius:12px; margin-bottom:12px; background:var(--bg); color:var(--text);">
+          <option value="admin">🛡️ သာမန် Admin</option>
+          <option value="super_admin">👑 Super Admin</option>
+        </select>
+        <button class="btn" onclick="addAdmin()">Admin ခန့်မယ်</button>
+      </div>
+      <div class="category-title">📋 လက်ရှိ Admins များ</div>
+      <div id="a-admin-list"></div>
+    </div>
+    
+    <div id="a-tab-settings" class="tab-content">
+      <div class="category-title">🏪 ဆိုင်အချက်အလက်</div>
+      <div class="card"><label style="font-size:13px; color:var(--hint);">ဆိုင်နာမည်</label><input type="text" id="s-shop-name"></div>
+      <div class="category-title">📞 Support ဆက်သွယ်ရန်</div>
+      <div class="card"><input type="text" id="s-support"></div>
+      <div class="category-title">💳 ငွေလွှဲမည့် အကောင့်</div>
+      <div class="card"><input type="text" id="s-pay-name" placeholder="အကောင့်အမည်"><input type="text" id="s-kpay" placeholder="KPay နံပါတ်"><input type="text" id="s-wave" placeholder="Wave နံပါတ်"><input type="number" id="s-min-cashout" placeholder="အနည်းဆုံး ငွေထုတ်ပမာဏ"></div>
+      <div class="category-title">⏳ စောင့်ဆိုင်းရန် ကြာချိန်</div>
+      <div class="card"><input type="text" id="s-wait-time" placeholder="၅ မိနစ်"></div>
+      <div class="category-title">🖼️ Category ပုံ ပြင်ရန်</div>
+      <div class="card"><input type="text" id="cat-img-name" placeholder="Category နာမည်"><input type="file" id="cat-img-file" accept="image/png" style="padding:10px; background:var(--bg);"><button class="btn btn-sm" onclick="uploadCatImage()">ပုံတင်မယ်</button></div>
+      <div class="category-title">📢 Broadcast ပို့ရန်</div>
+      <div class="card"><textarea id="bc-msg" rows="3" placeholder="စာသား..."></textarea><button class="btn btn-warning" onclick="sendBroadcast()">ပို့မယ်</button></div>
+      <button class="btn btn-success" style="margin-top:20px; padding:15px; width:100%;" onclick="saveSettings()">✅ သိမ်းဆည်းမယ်</button>
+    </div>
+  </div>
+
+  <!-- NAV CONTAINER -->
+  <div id="nav-container"></div>
+
+  <!-- MODALS -->
+  <div id="order-modal" class="modal">
+    <div class="modal-content">
+      <h3 id="m-item-name" style="color:var(--primary);">Item Name</h3>
+      <p id="m-item-price" style="color:var(--danger); font-weight:bold; font-size:18px;">0 Ks</p>
+      <p id="m-item-note" style="font-size:12px; color:var(--warning); display:none;"></p>
+      <div id="m-game-fields" style="display:none;">
+        <p style="font-size:13px; color:var(--hint);">In-Game Name</p><input type="text" id="m-game-name" placeholder="သင့် Game နာမည်">
+        <p style="font-size:13px; color:var(--hint);">Game ID</p><input type="text" id="m-game-id" placeholder="User ID / Character ID">
+        <div id="m-zone-box"><p style="font-size:13px; color:var(--hint);">Zone ID</p><input type="text" id="m-game-zone" placeholder="Zone ID"></div>
+      </div>
+      <div id="m-sim-fields" style="display:none;">
+        <p style="font-size:13px; color:var(--hint);">လိပ်စာ</p><input type="text" id="m-address" placeholder="လိပ်စာ အပြည့်အစုံ">
+        <p style="font-size:13px; color:var(--hint);">ဆက်သွယ်ရန် ဖုန်း</p><input type="tel" id="m-contact-phone" placeholder="09xxxxxxxxx">
+      </div>
+      <div id="m-data-fields">
+        <p style="font-size:13px; color:var(--hint);">ဖုန်းနံပါတ်</p><input type="tel" id="m-phone" placeholder="09xxxxxxxxx">
+      </div>
+      <div class="modal-btns"><button class="btn btn-outline" onclick="closeModal('order-modal')">ပယ်မယ်</button><button class="btn" onclick="submitOrder()">ဝယ်မယ်</button></div>
+    </div>
+  </div>
+
+  <div id="edit-item-modal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom:15px;">Item ပြင်ဆင်ရန်</h3>
+      <input type="text" id="edit-i-name" placeholder="အမည်">
+      <input type="number" id="edit-i-price" placeholder="User ဈေးနှုန်း">
+      <input type="number" id="edit-i-cost-price" placeholder="အရင်းဈေး (Admin Only)">
+      <input type="number" id="edit-i-reseller-price" placeholder="Reseller ဈေးနှုန်း">
+      <input type="text" id="edit-i-cat" placeholder="Main Category">
+      <input type="text" id="edit-i-subcat" placeholder="Sub Category">
+      <input type="text" id="edit-i-note" placeholder="သတိပေးချက်">
+      <input type="hidden" id="edit-i-id">
+      <div class="modal-btns"><button class="btn btn-outline" onclick="closeModal('edit-item-modal')">ပယ်မယ်</button><button class="btn btn-success" onclick="saveEditItem()">သိမ်းမယ်</button></div>
+    </div>
+  </div>
+
+  <div id="user-detail-modal" class="modal">
+    <div class="modal-content" style="max-width:400px; max-height:80vh; overflow-y:auto;">
+      <h3 id="ud-name">User Name</h3>
+      <span id="ud-role" class="badge bg-pending">USER</span>
+      <div class="stat-card" style="margin:15px 0; padding:10px;"><h4 style="font-size:12px;">Balance</h4><div class="value" id="ud-balance">0 Ks</div></div>
+      <div style="display:flex; gap:10px; margin-bottom:20px;"><input type="number" id="ud-amount" placeholder="ပမာဏ" style="margin:0;"><button class="btn btn-success btn-sm" style="flex:1;" onclick="adjustUserBalance('add')">အပေါင်း</button><button class="btn btn-danger btn-sm" style="flex:1;" onclick="adjustUserBalance('deduct')">အနုတ်</button></div>
+      <button class="btn btn-sm btn-danger" style="width:100%; margin-bottom:10px;" onclick="userAction(currentUserId, 'zero_balance')">⚠️ Balance သုည ဖြစ်အောင် လုပ်မယ်</button>
+      <div style="display:flex; gap:10px; margin-bottom:10px;"><input type="number" id="ud-remove-amount" placeholder="နုတ်မယ့် ပမာဏ" style="margin:0;"><button class="btn btn-sm btn-danger" style="flex:1;" onclick="removeUserBalance()">💰 ပြန်နုတ်မယ်</button></div>
+      <div class="category-title" style="font-size:14px;">💰 မှတ်တမ်း</div>
+      <div id="ud-transactions" style="max-height:200px; overflow-y:auto;"></div>
+      <div class="modal-btns" style="margin-top:15px;"><button class="btn btn-outline" onclick="closeModal('user-detail-modal')">ပိတ်မယ်</button></div>
+    </div>
+  </div>
+
+  <script src="/app.js?v=1"></script>
+</body>
+</html>
